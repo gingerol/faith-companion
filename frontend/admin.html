@@ -1,0 +1,3206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/static/logo.png">
+    <link rel="apple-touch-icon" href="/static/logo.png">
+    <title>Faith Companion - Analytics</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js">function logout() { window.location.href = "/admin/logout"; }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-base: #09090b;
+            --bg-elevated: #18181b;
+            --bg-card: #1f1f23;
+            --bg-hover: #27272a;
+            --text-primary: #fafafa;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --accent: #22d3ee;
+            --accent-secondary: #a855f7;
+            --accent-warm: #fb923c;
+            --accent-green: #4ade80;
+            --border: rgba(255,255,255,0.06);
+            --border-hover: rgba(255,255,255,0.12);
+            --gradient-1: linear-gradient(135deg, #22d3ee 0%, #a855f7 100%);
+            --gradient-2: linear-gradient(135deg, #fb923c 0%, #f472b6 100%);
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-base);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        /* Grid background pattern */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Gradient orb */
+        body::after {
+            content: '';
+            position: fixed;
+            top: -20%;
+            right: -10%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(34,211,238,0.08) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 32px;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 48px;
+            animation: fadeUp 0.5s ease-out;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo-mark {
+            width: 44px;
+            height: 44px;
+            background: var(--gradient-1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .header-text h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .header-text p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .refresh-btn {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 500;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .refresh-btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-hover);
+        }
+
+        .refresh-btn::before {
+            content: '↻';
+            font-size: 1rem;
+        }
+
+        .back-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            padding: 10px 16px;
+            border-radius: 10px;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: var(--text-primary);
+            background: var(--bg-elevated);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: visible;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: fadeUp 0.5s ease-out backwards;
+        }
+
+        .stat-card:nth-child(1) { animation-delay: 0.05s; }
+        .stat-card:nth-child(2) { animation-delay: 0.1s; }
+        .stat-card:nth-child(3) { animation-delay: 0.15s; }
+        .stat-card:nth-child(4) { animation-delay: 0.2s; }
+        .stat-card:nth-child(5) { animation-delay: 0.25s; }
+        .stat-card:nth-child(6) { animation-delay: 0.3s; }
+
+        .stat-card:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: var(--gradient-1);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .stat-card:hover::before { opacity: 1; }
+
+        .stat-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            margin-bottom: 16px;
+        }
+
+        .stat-card:nth-child(1) .stat-icon { background: rgba(34,211,238,0.15); color: #22d3ee; }
+        .stat-card:nth-child(2) .stat-icon { background: rgba(168,85,247,0.15); color: #a855f7; }
+        .stat-card:nth-child(3) .stat-icon { background: rgba(251,146,60,0.15); color: #fb923c; }
+        .stat-card:nth-child(4) .stat-icon { background: rgba(74,222,128,0.15); color: #4ade80; }
+        .stat-card:nth-child(5) .stat-icon { background: rgba(34,211,238,0.15); color: #22d3ee; }
+        .stat-card:nth-child(6) .stat-icon { background: rgba(168,85,247,0.15); color: #a855f7; }
+
+        .stat-card h3 {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+        }
+
+        .stat-value .unit {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-weight: 400;
+            margin-left: 2px;
+        }
+
+        .stat-subtext {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 8px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Charts Grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .chart-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            animation: fadeUp 0.5s ease-out 0.35s backwards;
+        }
+
+        .chart-card.compact {
+            padding: 18px;
+        }
+
+        .chart-card.compact h3 {
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+        }
+
+        .chart-card.compact canvas {
+            max-height: 160px;
+        }
+
+        .chart-card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .chart-card.half-width {
+            grid-column: span 1;
+        }
+
+        .chart-card h3, .table-card .table-header h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chart-card h3::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+            background: var(--accent);
+        }
+
+        /* Collapsible Panel Styles */
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .panel-header h3 {
+            margin-bottom: 0 !important;
+            flex: 1;
+        }
+
+        .collapse-btn {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+        }
+
+        .collapse-btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+        }
+
+        .collapse-btn .icon {
+            transition: transform 0.3s ease;
+        }
+
+        .collapsed .collapse-btn .icon {
+            transform: rotate(-90deg);
+        }
+
+        .panel-content {
+            overflow: visible;
+            transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+            max-height: 1000px;
+            opacity: 1;
+            margin-top: 20px;
+        }
+
+        .collapsed .panel-content {
+            max-height: 0;
+            opacity: 0;
+            margin-top: 0;
+        }
+
+        .location-list {
+            max-height: none;
+            overflow-y: auto;
+        }
+
+        .location-list::-webkit-scrollbar { width: 4px; }
+        .location-list::-webkit-scrollbar-track { background: transparent; }
+        .location-list::-webkit-scrollbar-thumb { background: var(--bg-hover); border-radius: 4px; }
+
+        .location-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .location-item:last-child { border-bottom: none; }
+        .location-item:hover { padding-left: 8px; }
+
+        .location-name {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .location-count {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--accent);
+        }
+
+        /* Term Cloud */
+        .term-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+            padding: 16px 0;
+        }
+
+        .term-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .term-item:hover {
+            border-color: var(--border-hover);
+            background: var(--bg-hover);
+            transform: scale(1.05);
+        }
+
+        .term-count {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent);
+            background: rgba(34,211,238,0.1);
+            padding: 2px 6px;
+            border-radius: 8px;
+        }
+
+        /* Low Confidence Table */
+        .low-confidence-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .low-confidence-item {
+            padding: 14px;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.2s;
+        }
+
+        .low-confidence-item:hover {
+            background: var(--bg-elevated);
+        }
+
+        .low-confidence-item:last-child {
+            border-bottom: none;
+        }
+
+        .confidence-query {
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+
+        .confidence-meta {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .confidence-score {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent-warm);
+        }
+
+        .confidence-timestamp {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        /* Cost Grid */
+        .cost-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .cost-item {
+            background: var(--bg-elevated);
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .cost-item label {
+            color: var(--text-muted);
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .cost-item span {
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Table */
+        .table-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            animation: fadeUp 0.5s ease-out 0.4s backwards;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .table-header h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .table-header h3::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+            background: var(--accent-secondary);
+        }
+
+        .table-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .table-controls label {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        .per-page-select {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .per-page-select:hover { border-color: var(--border-hover); }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px 10px;
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 14px 10px;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tbody tr {
+            transition: background 0.15s;
+            cursor: pointer;
+        }
+
+        tbody tr:hover {
+            background: var(--bg-elevated);
+        }
+
+        .query-text {
+            max-width: 260px;
+            white-space: nowrap;
+            overflow: visible;
+            text-overflow: ellipsis;
+            color: var(--text-primary);
+        }
+
+        .timestamp {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .badge::before {
+            content: '';
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .badge-mobile { background: rgba(251,146,60,0.12); color: #fb923c; }
+        .badge-pc { background: rgba(34,211,238,0.12); color: #22d3ee; }
+        .badge-tablet { background: rgba(168,85,247,0.12); color: #a855f7; }
+
+        .location-cell {
+            font-size: 0.75rem;
+            max-width: 130px;
+            white-space: nowrap;
+            overflow: visible;
+            text-overflow: ellipsis;
+        }
+
+        .device-cell {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .response-time {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .pagination button {
+            background: var(--bg-elevated);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border-color: var(--border-hover);
+        }
+
+        .pagination button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            padding: 0 12px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active { display: flex; }
+
+        .modal-content {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 32px;
+            max-width: 640px;
+            max-height: 85vh;
+            overflow-y: auto;
+            width: 90%;
+            border: 1px solid var(--border);
+            animation: fadeUp 0.25s ease-out;
+        }
+
+        .modal-content.large {
+            max-width: 1200px;
+        }
+
+        /* Light theme for Advanced Analytics modal */
+        .modal-content.light {
+            background: #f8fafc;
+            color: #1e293b;
+        }
+
+        .modal-content.light .modal-header h3 {
+            color: #0f172a;
+        }
+
+        .modal-content.light .modal-close {
+            background: #e2e8f0;
+            border-color: #cbd5e1;
+            color: #475569;
+        }
+
+        .modal-content.light .modal-close:hover {
+            background: #cbd5e1;
+            color: #1e293b;
+        }
+
+        /* Advanced Analytics Button */
+        .advanced-btn {
+            background: linear-gradient(135deg, rgba(168,85,247,0.15) 0%, rgba(34,211,238,0.15) 100%);
+            color: var(--text-primary);
+            border: 1px solid rgba(168,85,247,0.3);
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 500;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .advanced-btn:hover {
+            background: linear-gradient(135deg, rgba(168,85,247,0.25) 0%, rgba(34,211,238,0.25) 100%);
+            border-color: rgba(168,85,247,0.5);
+            transform: translateY(-1px);
+        }
+
+        /* User Cards Grid */
+        .users-grid {
+            display: grid;
+            gap: 12px;
+            max-height: 65vh;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .user-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .user-card:hover {
+            border-color: #a855f7;
+            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.1);
+        }
+
+        .user-card.expanded {
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        .user-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #22d3ee 0%, #a855f7 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .user-avatar.return {
+            background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+        }
+
+        .user-main {
+            min-width: 0;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+        }
+
+        .user-location {
+            color: #64748b;
+            font-size: 0.8rem;
+        }
+
+        .user-stats {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .user-stat {
+            text-align: center;
+        }
+
+        .user-stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .user-stat-label {
+            font-size: 0.65rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* User Details (expanded) */
+        .user-details {
+            display: none;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .user-card.expanded .user-details {
+            display: grid;
+        }
+
+        .user-card.expanded .user-header {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .detail-box {
+            background: #f1f5f9;
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .detail-box label {
+            display: block;
+            font-size: 0.6rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 4px;
+        }
+
+        .detail-box span {
+            color: #1e293b;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .detail-box.full {
+            grid-column: 1 / -1;
+        }
+
+        /* User Chats List */
+        .user-chats {
+            grid-column: 1 / -1;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            max-height: none;
+            overflow-y: auto;
+        }
+
+        .user-chat-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .user-chat-item:last-child {
+            border-bottom: none;
+        }
+
+        .chat-query {
+            color: #1e293b;
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+        }
+
+        .chat-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 0.7rem;
+            color: #94a3b8;
+        }
+
+        /* Pagination for users */
+        .users-pagination {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .users-pagination button {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .users-pagination button:hover:not(:disabled) {
+            background: #f1f5f9;
+            border-color: #a855f7;
+            color: #a855f7;
+        }
+
+        .users-pagination button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .users-pagination .page-info {
+            color: #64748b;
+            padding: 8px 12px;
+            font-size: 0.8rem;
+        }
+
+        /* Summary stats at top */
+        .users-summary {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .summary-stat {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .summary-stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .summary-stat-value.accent {
+            color: #22d3ee;
+        }
+
+        .summary-stat-value.purple {
+            color: #a855f7;
+        }
+
+        .summary-stat-label {
+            font-size: 0.7rem;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+
+        .users-grid::-webkit-scrollbar { width: 6px; }
+        .users-grid::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+        .users-grid::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .users-grid::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* View Profile Button */
+        .view-profile-btn {
+            width: 100%;
+            margin-top: 20px;
+            padding: 14px 20px;
+            background: linear-gradient(135deg, #a855f7 0%, #22d3ee 100%);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .view-profile-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+        }
+
+        /* Model info in cost grid */
+        .model-info {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, rgba(34,211,238,0.08) 0%, rgba(168,85,247,0.08) 100%);
+            border-color: rgba(34,211,238,0.2);
+            padding: 8px 12px;
+        }
+
+        .model-info .model-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .model-info .model-pricing {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+        }
+
+        .modal-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .detail-item {
+            background: var(--bg-elevated);
+            padding: 14px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .detail-item label {
+            color: var(--text-muted);
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .detail-item span {
+            color: var(--text-primary);
+            font-size: 0.85rem;
+        }
+
+        .modal-section {
+            margin-bottom: 20px;
+        }
+
+        .modal-section h4 {
+            color: var(--accent);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .modal-section p {
+            color: var(--text-secondary);
+            line-height: 1.7;
+            white-space: pre-wrap;
+            font-size: 0.85rem;
+            background: var(--bg-elevated);
+            padding: 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            margin-left: 8px;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .charts-grid { grid-template-columns: 1fr 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 20px; }
+
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+
+            .charts-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .detail-grid { grid-template-columns: 1fr; }
+            .cost-grid { grid-template-columns: 1fr; }
+
+            .stat-value { font-size: 1.6rem; }
+
+            th, td { padding: 10px 6px; font-size: 0.7rem; }
+            .query-text { max-width: 120px; }
+        }
+    
+        /* Conversations Modal Styles */
+        .conversations-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .conversations-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+        .conv-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: visible;
+        }
+        .conv-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #e2e8f0;
+            cursor: pointer;
+        }
+        .conv-header:hover {
+            background: #cbd5e1;
+        }
+        .conv-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+        .conv-body {
+            display: none;
+            padding: 0;
+        }
+        .conv-card.expanded .conv-body {
+            max-height: 70vh;
+            overflow-y: auto;
+            display: block;
+        }
+        .conv-message {
+            padding: 16px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .conv-message:last-child {
+            border-bottom: none;
+        }
+        .conv-message.user-msg {
+            background: #ffffff;
+        }
+        .conv-message.ai-msg {
+            background: #f1f5f9;
+        }
+        .conv-msg-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .conv-msg-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .conv-message.user-msg .conv-msg-label {
+            background: #0891b2;
+            color: white;
+        }
+        .conv-message.ai-msg .conv-msg-label {
+            background: #7c3aed;
+            color: white;
+        }
+        .conv-msg-time {
+            font-size: 0.7rem;
+            color: #94a3b8;
+        }
+        .conv-msg-content {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: #1e293b;
+            white-space: pre-wrap;
+        }
+        .conv-message.ai-msg .conv-msg-content {
+            max-height: none;
+            overflow-y: auto;
+        }
+        .conv-msg-footer {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+            font-size: 0.7rem;
+            color: #94a3b8;
+        }
+        .conv-pagination {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 16px 0;
+        }
+        .conv-pagination button {
+            padding: 8px 16px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .conv-pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .expand-icon {
+            transition: transform 0.2s;
+        }
+        .conv-card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+        
+        /* Feedback Modal Styles */
+        .feedback-filters {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .feedback-filters select {
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        .feedback-export-btn {
+            padding: 8px 16px;
+            background: #059669;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            margin-left: auto;
+        }
+        .feedback-export-btn:hover {
+            background: #047857;
+        }
+        .feedback-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        .feedback-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .feedback-item.positive {
+            border-left: 4px solid #22c55e;
+        }
+        .feedback-item.negative {
+            border-left: 4px solid #ef4444;
+        }
+        .feedback-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .feedback-type {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .feedback-type.positive {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .feedback-type.negative {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .feedback-meta {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+        .feedback-comment {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 12px;
+            font-style: italic;
+            color: #475569;
+        }
+        .feedback-comment-label {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .feedback-qa {
+            font-size: 0.85rem;
+        }
+        .feedback-qa-label {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .feedback-qa-content {
+            color: #334155;
+            line-height: 1.5;
+        }
+        .no-feedback {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+        
+        /* Spiritual Direction Admin Styles */
+        .sd-request-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 65vh;
+            overflow-y: auto;
+        }
+        .sd-request-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 16px;
+        }
+        .sd-request-card.pending {
+            border-left: 4px solid #f59e0b;
+        }
+        .sd-request-card.contacted {
+            border-left: 4px solid #3b82f6;
+        }
+        .sd-request-card.followed_up {
+            border-left: 4px solid #22c55e;
+        }
+        .sd-request-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        .sd-request-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #1e293b;
+        }
+        .sd-request-type {
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+        .sd-request-type.spiritual_direction {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .sd-request-type.confession {
+            background: #fce7f3;
+            color: #9d174d;
+        }
+        .sd-request-type.both {
+            background: #f3e8ff;
+            color: #6b21a8;
+        }
+        .sd-request-contact {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+        .sd-request-contact a {
+            color: #8B4513;
+            text-decoration: none;
+        }
+        .sd-request-contact a:hover {
+            text-decoration: underline;
+        }
+        .sd-request-message {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: #475569;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+        .sd-request-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+        .sd-request-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .sd-request-actions button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        .sd-btn-contact {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        
+        .sd-btn-delete {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .sd-btn-delete:hover {
+            background: #fecaca;
+        }
+        .sd-export-btn {
+            padding: 8px 16px;
+            background: #059669;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .sd-export-btn:hover {
+            background: #047857;
+        }
+        .sd-btn-reset {
+            background: #94a3b8;
+            color: white;
+        }
+        .sd-btn-reset:hover {
+            background: #64748b;
+        }
+        .sd-btn-done {
+            background: #22c55e;
+            color: white;
+        }
+        .sd-filter-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .sd-filter-bar select {
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+        }
+        .sd-stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 16px;
+            font-size: 0.85rem;
+        }
+        .sd-stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .sd-stat .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .sd-stat .dot.pending { background: #f59e0b; }
+        .sd-stat .dot.contacted { background: #3b82f6; }
+        .sd-stat .dot.done { background: #22c55e; }
+        
+        /* Notification Badge */
+        .btn-with-badge {
+            position: relative;
+        }
+        .notification-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #ef4444;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .notification-badge:empty,
+        .notification-badge.hidden {
+            display: none;
+        }
+        </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <div class="logo-mark">FC</div>
+                <div class="header-text">
+                    <h1>Analytics</h1>
+                    <p>Faith Companion Dashboard</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="advanced-btn btn-with-badge" onclick="openSpiritualDirectionAdmin()">🙏 Requests<span class="notification-badge" id="requestsBadge"></span></button>
+                <button class="advanced-btn" onclick="openFeedbackModal()">Feedback</button>
+                <button class="advanced-btn" onclick="openConversationsModal()">💬 Conversations</button>
+                <button class="advanced-btn" onclick="openAdvancedAnalytics()">👥 User Profiles</button>
+                <button class="refresh-btn" onclick="loadAllData()">Refresh</button>
+                <a href="/" class="back-link">← Back to Chat</a>
+                <button class="advanced-btn" onclick="logout()" style="background: #dc2626; color: white;">🚪 Logout</button>
+            </div>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">💬</div>
+                <h3>Total Conversations</h3>
+                <div class="stat-value" id="totalChats">—</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <h3>Unique Visitors</h3>
+                <div class="stat-value" id="uniqueVisitors">—</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⚡</div>
+                <h3>Avg Response</h3>
+                <div class="stat-value" id="avgResponse">—<span class="unit">ms</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📈</div>
+                <h3>Today</h3>
+                <div class="stat-value" id="todayChats">—</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">😊</div>
+                <h3>Satisfaction</h3>
+                <div class="stat-value" id="satisfactionRate">—<span class="unit">%</span></div>
+                <div class="stat-subtext" id="feedbackCounts">👍 — · 👎 —</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💰</div>
+                <h3>Today's Cost</h3>
+                <div class="stat-value" id="todayCost">—<span class="unit">$</span></div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>Activity</h3>
+                <canvas id="dailyChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Devices</h3>
+                <canvas id="deviceChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Locations</h3>
+                <div class="location-list" id="locationList">
+                    <div class="loading">Loading</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Analytics Sections -->
+        <div class="charts-grid">
+            <div class="chart-card compact">
+                <h3>Topic Distribution</h3>
+                <canvas id="topicChart"></canvas>
+            </div>
+            <div class="chart-card compact">
+                <h3>Return Visitors</h3>
+                <canvas id="visitorTypeChart"></canvas>
+            </div>
+            <div class="chart-card compact">
+                <h3>Cost Tracking</h3>
+                <div class="cost-grid">
+                    <div class="cost-item model-info">
+                        <label>Model</label>
+                        <div class="model-name" id="modelName">—</div>
+                        <div class="model-pricing" id="modelPricing">—</div>
+                    </div>
+                    <div class="cost-item">
+                        <label>Total Tokens</label>
+                        <span id="totalTokens">—</span>
+                    </div>
+                    <div class="cost-item">
+                        <label>Total Cost</label>
+                        <span id="totalCost">—</span>
+                    </div>
+                    <div class="cost-item">
+                        <label>Input Tokens</label>
+                        <span id="inputTokens">—</span>
+                    </div>
+                    <div class="cost-item">
+                        <label>Output Tokens</label>
+                        <span id="outputTokens">—</span>
+                    </div>
+                    <div class="cost-item">
+                        <label>Avg per Chat</label>
+                        <span id="avgCostPerChat">—</span>
+                    </div>
+                    <div class="cost-item">
+                        <label>Avg Messages</label>
+                        <span id="avgMessagesPerSession">—</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card full-width collapsible" id="hourlyPanel">
+                <div class="panel-header" onclick="togglePanel('hourlyPanel')">
+                    <h3>Activity by Hour of Day</h3>
+                    <button class="collapse-btn"><span class="icon">▼</span></button>
+                </div>
+                <div class="panel-content">
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card collapsible" id="weekdayPanel">
+                <div class="panel-header" onclick="togglePanel('weekdayPanel')">
+                    <h3>Activity by Day of Week</h3>
+                    <button class="collapse-btn"><span class="icon">▼</span></button>
+                </div>
+                <div class="panel-content">
+                    <canvas id="weekdayChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card collapsible" style="grid-column: span 2;" id="termsPanel">
+                <div class="panel-header" onclick="togglePanel('termsPanel')">
+                    <h3>Popular Search Terms</h3>
+                    <button class="collapse-btn"><span class="icon">▼</span></button>
+                </div>
+                <div class="panel-content">
+                    <div class="term-cloud" id="termCloud">
+                        <div class="loading">Loading</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-card collapsible" id="lowConfidencePanel">
+            <div class="panel-header" onclick="togglePanel('lowConfidencePanel')">
+                <h3>Low Confidence Queries</h3>
+                <button class="collapse-btn"><span class="icon">▼</span></button>
+            </div>
+            <div class="panel-content">
+                <div class="low-confidence-list" id="lowConfidenceList">
+                    <div class="loading">Loading</div>
+                </div>
+            </div>
+        </div>
+
+        
+    </div>
+
+    <div class="modal" id="detailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Details</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <div class="modal" id="advancedModal">
+        <div class="modal-content large light">
+            <div class="modal-header">
+                <h3>User Profiles</h3>
+                <button class="modal-close" onclick="closeAdvancedModal()">×</button>
+            </div>
+            <div id="advancedModalBody">
+                <div class="loading" style="color: #64748b;">Loading user profiles</div>
+            </div>
+        </div>
+    </div>
+
+
+    
+    
+    <div class="modal" id="spiritualDirectionAdminModal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>🙏 Spiritual Direction Requests</h3>
+                <button class="modal-close" onclick="closeSpiritualDirectionAdmin()">&times;</button>
+            </div>
+            <div id="sdAdminBody">
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3>User Feedback</h3>
+                <button class="modal-close" onclick="closeFeedbackModal()">&times;</button>
+            </div>
+            <div class="feedback-filters">
+                <select id="feedbackTypeFilter" onchange="loadFeedback(1)">
+                    <option value="">All Feedback</option>
+                    <option value="positive">Positive Only</option>
+                    <option value="negative">Negative Only</option>
+                </select>
+                <button class="feedback-export-btn" onclick="exportFeedback()">Download CSV</button>
+            </div>
+            <div id="feedbackModalBody">
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="conversationsModal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3>All Conversations</h3>
+                <button class="modal-close" onclick="closeConversationsModal()">×</button>
+            </div>
+            <div id="conversationsModalBody">
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let dailyChart, deviceChart, topicChart, hourlyChart, weekdayChart, visitorTypeChart;
+        let currentPage = 1;
+        let perPage = 20;
+
+        // Panel collapse state persistence
+        const collapsedPanels = JSON.parse(localStorage.getItem('collapsedPanels') || '{}');
+
+        function togglePanel(panelId) {
+            const panel = document.getElementById(panelId);
+            panel.classList.toggle('collapsed');
+            collapsedPanels[panelId] = panel.classList.contains('collapsed');
+            localStorage.setItem('collapsedPanels', JSON.stringify(collapsedPanels));
+        }
+
+        function restoreCollapsedPanels() {
+            Object.entries(collapsedPanels).forEach(([panelId, isCollapsed]) => {
+                if (isCollapsed) {
+                    const panel = document.getElementById(panelId);
+                    if (panel) panel.classList.add('collapsed');
+                }
+            });
+        }
+
+        function formatTimestamp(isoString) {
+            const date = new Date(isoString);
+            return {
+                full: date.toLocaleString("en-NG", {
+                    month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false
+                })
+            };
+        }
+
+        async function loadSummary() {
+            try {
+                const response = await fetch("/api/analytics/summary", { credentials: 'include' });
+                if (response.status === 401) { window.location.reload(); return; }
+                const data = await response.json();
+
+                animateValue("totalChats", data.total_chats);
+                animateValue("uniqueVisitors", data.unique_sessions);
+                document.getElementById("avgResponse").innerHTML = Math.round(data.avg_response_time_ms) + '<span class="unit">ms</span>';
+
+                const today = new Date().toISOString().split("T")[0];
+                const todayData = data.daily_stats.find(d => d.date === today);
+                animateValue("todayChats", todayData ? todayData.count : 0);
+
+                updateDailyChart(data.daily_stats);
+                updateDeviceChart(data.devices);
+                updateLocationList(data.locations);
+
+                // Update satisfaction rate from summary data
+                const positive = data.positive_feedback || 0;
+                const negative = data.negative_feedback || 0;
+                const total = positive + negative;
+                const rate = total > 0 ? Math.round((positive / total) * 100) : 0;
+                document.getElementById("satisfactionRate").innerHTML = rate + '<span class="unit">%</span>';
+                document.getElementById("feedbackCounts").textContent = `👍 ${positive} · 👎 ${negative}`;
+            } catch (error) {
+                console.error("Failed to load summary:", error);
+            }
+        }
+
+        async function loadFeedback() {
+            try {
+                const response = await fetch("/api/analytics/feedback", { credentials: 'include' });
+                if (response.status === 401) return;
+                const data = await response.json();
+
+                const total = data.positive + data.negative;
+                const rate = total > 0 ? Math.round((data.positive / total) * 100) : 0;
+
+                document.getElementById("satisfactionRate").innerHTML = rate + '<span class="unit">%</span>';
+                document.getElementById("feedbackCounts").textContent = `👍 ${data.positive} · 👎 ${data.negative}`;
+            } catch (error) {
+                console.error("Failed to load feedback:", error);
+            }
+        }
+
+        async function loadTopics() {
+            try {
+                const response = await fetch("/api/analytics/topics", { credentials: 'include' });
+                if (response.status === 401) return;
+                const data = await response.json();
+                updateTopicChart(data.topics);
+            } catch (error) {
+                console.error("Failed to load topics:", error);
+            }
+        }
+
+        async function loadTimePatterns() {
+            try {
+                const response = await fetch("/api/analytics/time-patterns", { credentials: 'include' });
+                if (response.status === 401) return;
+                const data = await response.json();
+                updateHourlyChart(data.hourly);
+                updateWeekdayChart(data.daily);
+                updateVisitorTypeChart(data.visitor_stats);
+            } catch (error) {
+                console.error("Failed to load time patterns:", error);
+            }
+        }
+
+        async function loadCosts() {
+            try {
+                const response = await fetch("/api/analytics/costs", { credentials: 'include' });
+                if (response.status === 401) return;
+                const data = await response.json();
+
+                // Model info
+                document.getElementById("modelName").textContent = data.model_display || data.model || "Claude 3 Haiku";
+                const inputCost = data.input_cost_per_mtok || 0.25;
+                const outputCost = data.output_cost_per_mtok || 1.25;
+                document.getElementById("modelPricing").textContent = `$${inputCost}/MTok input · $${outputCost}/MTok output`;
+
+                document.getElementById("totalTokens").textContent = (data.total_input_tokens + data.total_output_tokens).toLocaleString();
+                document.getElementById("inputTokens").textContent = data.total_input_tokens.toLocaleString();
+                document.getElementById("outputTokens").textContent = data.total_output_tokens.toLocaleString();
+                document.getElementById("totalCost").textContent = "$" + data.total_cost.toFixed(4);
+                document.getElementById("avgCostPerChat").textContent = "$" + data.avg_cost_per_chat.toFixed(4);
+                document.getElementById("todayCost").innerHTML = data.today_cost.toFixed(4) + '<span class="unit">$</span>';
+                document.getElementById("avgMessagesPerSession").textContent = data.avg_messages_per_session.toFixed(1);
+            } catch (error) {
+                console.error("Failed to load costs:", error);
+            }
+        }
+
+        async function loadTerms() {
+            try {
+                const response = await fetch("/api/analytics/terms", { credentials: 'include' });
+                if (response.status === 401) return;
+                const data = await response.json();
+                updateTermCloud(data.terms);
+            } catch (error) {
+                console.error("Failed to load terms:", error);
+            }
+        }
+
+        async function loadLowConfidence() {
+            try {
+                const response = await fetch("/api/analytics/low-confidence", { credentials: 'include' });
+                if (response.status === 401) return;
+                const data = await response.json();
+                updateLowConfidenceList(data.queries);
+            } catch (error) {
+                console.error("Failed to load low confidence queries:", error);
+            }
+        }
+
+        function animateValue(id, value) {
+            const el = document.getElementById(id);
+            const duration = 600;
+            const start = parseInt(el.textContent) || 0;
+            const startTime = performance.now();
+
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                el.textContent = Math.round(start + (value - start) * eased).toLocaleString();
+                if (progress < 1) requestAnimationFrame(update);
+            }
+            requestAnimationFrame(update);
+        }
+
+        async function loadQueries() {
+            try {
+                const response = await fetch(`/api/analytics/queries?page=${currentPage}&per_page=${perPage}`, { credentials: 'include' });
+                if (response.status === 401) { window.location.reload(); return; }
+                const data = await response.json();
+                updateQueriesTable(data.queries);
+                updatePagination(data.pagination);
+            } catch (error) {
+                console.error("Failed to load queries:", error);
+            }
+        }
+
+        
+        // Fetch pending spiritual direction requests count
+        async function loadRequestsBadge() {
+            try {
+                const response = await fetch('/api/admin/spiritual-direction?status=pending', { credentials: 'include' });
+                if (response.ok) {
+                    const data = await response.json();
+                    const count = data.requests ? data.requests.length : 0;
+                    const badge = document.getElementById('requestsBadge');
+                    if (count > 0) {
+                        badge.textContent = count;
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+            } catch (error) {
+                console.log('Could not load requests count');
+            }
+        }
+
+        // Load badge on page load
+        loadRequestsBadge();
+
+function loadAllData() {
+            restoreCollapsedPanels();
+            loadSummary();
+            loadFeedback();
+            loadTopics();
+            loadTimePatterns();
+            loadCosts();
+            loadTerms();
+            loadLowConfidence();
+            loadQueries();
+        }
+
+        function updateDailyChart(dailyStats) {
+            const ctx = document.getElementById("dailyChart").getContext("2d");
+            if (dailyChart) dailyChart.destroy();
+
+            const labels = dailyStats.map(d => {
+                const date = new Date(d.date);
+                return date.toLocaleDateString("en-US", { weekday: "short" });
+            });
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+            gradient.addColorStop(0, 'rgba(34, 211, 238, 0.3)');
+            gradient.addColorStop(1, 'rgba(34, 211, 238, 0.02)');
+
+            dailyChart = new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: "Conversations",
+                        data: dailyStats.map(d => d.count),
+                        borderColor: "#22d3ee",
+                        backgroundColor: gradient,
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: "#22d3ee",
+                        pointBorderColor: "#09090b",
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: "rgba(255,255,255,0.04)", drawBorder: false },
+                            ticks: { color: "#71717a", font: { size: 10, family: 'JetBrains Mono' } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: "#71717a", font: { size: 10, family: 'JetBrains Mono' } }
+                        }
+                    },
+                    interaction: { intersect: false, mode: 'index' }
+                }
+            });
+        }
+
+        function updateDeviceChart(devices) {
+            const ctx = document.getElementById("deviceChart").getContext("2d");
+            if (deviceChart) deviceChart.destroy();
+
+            const labels = Object.keys(devices);
+            const values = Object.values(devices);
+            if (labels.length === 0) { labels.push("No data"); values.push(1); }
+
+            deviceChart = new Chart(ctx, {
+                type: "doughnut",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: ["#22d3ee", "#a855f7", "#fb923c", "#4ade80"],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: "bottom",
+                            labels: {
+                                color: "#71717a",
+                                padding: 12,
+                                font: { size: 11, family: 'Outfit' },
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                generateLabels: function(chart) {
+                                    const data = chart.data;
+                                    const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                    return data.labels.map((label, i) => ({
+                                        text: label + ' (' + data.datasets[0].data[i] + ')',
+                                        fillStyle: data.datasets[0].backgroundColor[i],
+                                        hidden: false,
+                                        index: i,
+                                        fontColor: '#71717a'
+                                    }));
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateTopicChart(topics) {
+            const ctx = document.getElementById("topicChart").getContext("2d");
+            if (topicChart) topicChart.destroy();
+
+            const labels = topics.map(t => t.topic);
+            const values = topics.map(t => t.count);
+
+            topicChart = new Chart(ctx, {
+                type: "doughnut",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: [
+                            "#22d3ee", "#a855f7", "#fb923c", "#4ade80",
+                            "#f472b6", "#fbbf24", "#34d399", "#60a5fa", "#c084fc"
+                        ],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '65%',
+                    plugins: {
+                        legend: {
+                            position: "bottom",
+                            labels: {
+                                generateLabels: function(chart) {
+                                    const data = chart.data;
+                                    return data.labels.map((label, i) => ({
+                                        text: label + ' (' + data.datasets[0].data[i] + ')',
+                                        fillStyle: data.datasets[0].backgroundColor[i % data.datasets[0].backgroundColor.length],
+                                        hidden: false,
+                                        index: i,
+                                        fontColor: '#71717a'
+                                    }));
+                                },
+                                color: "#71717a",
+                                padding: 8,
+                                font: { size: 10, family: 'Outfit' },
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateHourlyChart(hourlyData) {
+            const ctx = document.getElementById("hourlyChart").getContext("2d");
+            if (hourlyChart) hourlyChart.destroy();
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+            gradient.addColorStop(0, 'rgba(168, 85, 247, 0.3)');
+            gradient.addColorStop(1, 'rgba(168, 85, 247, 0.02)');
+
+            hourlyChart = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+                    datasets: [{
+                        label: "Activity",
+                        data: hourlyData,
+                        backgroundColor: gradient,
+                        borderColor: "#a855f7",
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: "rgba(255,255,255,0.04)", drawBorder: false },
+                            ticks: { color: "#71717a", font: { size: 10, family: 'JetBrains Mono' } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: "#71717a", font: { size: 9, family: 'JetBrains Mono' } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateWeekdayChart(dailyData) {
+            const ctx = document.getElementById("weekdayChart").getContext("2d");
+            if (weekdayChart) weekdayChart.destroy();
+
+            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+            gradient.addColorStop(0, 'rgba(251, 146, 60, 0.3)');
+            gradient.addColorStop(1, 'rgba(251, 146, 60, 0.02)');
+
+            weekdayChart = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: days,
+                    datasets: [{
+                        label: "Activity",
+                        data: dailyData,
+                        backgroundColor: gradient,
+                        borderColor: "#fb923c",
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: "rgba(255,255,255,0.04)", drawBorder: false },
+                            ticks: { color: "#71717a", font: { size: 10, family: 'JetBrains Mono' } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: "#71717a", font: { size: 10, family: 'JetBrains Mono' } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateVisitorTypeChart(stats) {
+            const ctx = document.getElementById("visitorTypeChart").getContext("2d");
+            if (visitorTypeChart) visitorTypeChart.destroy();
+
+            visitorTypeChart = new Chart(ctx, {
+                type: "doughnut",
+                data: {
+                    labels: ["New", "Returning"],
+                    datasets: [{
+                        data: [stats.new_visitors, stats.returning_visitors],
+                        backgroundColor: ["#22d3ee", "#a855f7"],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: "bottom",
+                            labels: {
+                                color: "#71717a",
+                                padding: 12,
+                                font: { size: 11, family: 'Outfit' },
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                generateLabels: function(chart) {
+                                    const data = chart.data;
+                                    return data.labels.map((label, i) => ({
+                                        text: label + ' (' + data.datasets[0].data[i] + ')',
+                                        fillStyle: data.datasets[0].backgroundColor[i],
+                                        hidden: false,
+                                        index: i,
+                                        fontColor: '#71717a'
+                                    }));
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateTermCloud(terms) {
+            const cloud = document.getElementById("termCloud");
+            if (!terms || terms.length === 0) {
+                cloud.innerHTML = '<div style="padding: 20px; color: var(--text-muted);">No data yet</div>';
+                return;
+            }
+
+            cloud.innerHTML = terms.slice(0, 20).map(term => {
+                const fontSize = Math.max(0.7, Math.min(1.1, 0.7 + (term.count / terms[0].count) * 0.4));
+                return `
+                    <div class="term-item" style="font-size: ${fontSize}rem;">
+                        ${term.term}
+                        <span class="term-count">${term.count}</span>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function updateLowConfidenceList(queries) {
+            const list = document.getElementById("lowConfidenceList");
+            if (!queries || queries.length === 0) {
+                list.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted);">No low confidence queries</div>';
+                return;
+            }
+
+            list.innerHTML = queries.map(q => {
+                const ts = formatTimestamp(q.timestamp);
+                return `
+                    <div class="low-confidence-item">
+                        <div class="confidence-query">${q.query}</div>
+                        <div class="confidence-meta">
+                            <span class="confidence-score">Score: ${q.rag_score ? q.rag_score.toFixed(3) : 'N/A'}</span>
+                            <span class="confidence-timestamp">${ts.full}</span>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function updateLocationList(locations) {
+            const list = document.getElementById("locationList");
+            if (!locations || locations.length === 0) {
+                list.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted);">No data yet</div>';
+                return;
+            }
+            list.innerHTML = locations.map(loc => {
+                const name = [loc.city, loc.country].filter(Boolean).join(", ") || "Unknown";
+                return `<div class="location-item"><span class="location-name">${name}</span><span class="location-count">${loc.count}</span></div>`;
+            }).join("");
+        }
+
+        function updateQueriesTable(queries) {
+            const tbody = document.getElementById("queriesTable"); if (!tbody) return;
+            if (queries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 40px;">No conversations yet</td></tr>';
+                return;
+            }
+            tbody.innerHTML = queries.map(q => {
+                const ts = formatTimestamp(q.timestamp);
+                const deviceBadge = q.device_type === "Mobile" ? "badge-mobile" : q.device_type === "Tablet" ? "badge-tablet" : "badge-pc";
+                const location = [q.city, q.country].filter(Boolean).join(", ") || "—";
+                const device = q.device_brand !== "Unknown" ? q.device_brand : q.device_type;
+                const platform = `${q.browser || "—"} / ${q.os || "—"}`;
+
+                return `
+                    <tr onclick="showDetail(${q.id}, ${JSON.stringify(q).replace(/"/g, '&quot;')})">
+                        <td class="timestamp">${ts.full}</td>
+                        <td class="query-text" title="${q.query}">${q.query}</td>
+                        <td class="location-cell">${location}</td>
+                        <td><span class="badge ${deviceBadge}">${device}</span></td>
+                        <td class="device-cell">${platform}</td>
+                        <td class="response-time">${q.response_time_ms}ms</td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        function updatePagination(pag) { const el = document.getElementById("pagination"); if (!el) return;
+            el.innerHTML = `
+                <button onclick="goToPage(1)" ${pag.page === 1 ? 'disabled' : ''}>«</button>
+                <button onclick="goToPage(${pag.page - 1})" ${!pag.has_prev ? 'disabled' : ''}>‹</button>
+                <span class="page-info">${pag.page}/${pag.total_pages}</span>
+                <button onclick="goToPage(${pag.page + 1})" ${!pag.has_next ? 'disabled' : ''}>›</button>
+                <button onclick="goToPage(${pag.total_pages})" ${pag.page === pag.total_pages ? 'disabled' : ''}>»</button>
+            `;
+        }
+
+        function goToPage(page) { currentPage = page; loadQueries(); }
+        function changePerPage() { perPage = parseInt(document.getElementById("perPageSelect").value); currentPage = 1; loadQueries(); }
+
+        function showDetail(id, data) {
+            const ts = formatTimestamp(data.timestamp);
+            const location = [data.city, data.region, data.country].filter(Boolean).join(", ") || "Unknown";
+            const userId = data.session_id || data.ip;
+            document.getElementById("modalBody").innerHTML = `
+                <div class="detail-grid">
+                    <div class="detail-item"><label>Time</label><span>${ts.full}</span></div>
+                    <div class="detail-item"><label>Speed</label><span>${data.response_time_ms}ms</span></div>
+                    <div class="detail-item"><label>Location</label><span>${location}</span></div>
+                    <div class="detail-item"><label>Timezone</label><span>${data.timezone || "—"}</span></div>
+                    <div class="detail-item"><label>Device</label><span>${data.device_type} — ${data.device_brand} ${data.device_model || ""}</span></div>
+                    <div class="detail-item"><label>Browser</label><span>${data.browser} ${data.browser_version || ""}</span></div>
+                    <div class="detail-item"><label>OS</label><span>${data.os} ${data.os_version || ""}</span></div>
+                    <div class="detail-item"><label>ISP</label><span>${data.isp || "—"}</span></div>
+                </div>
+                <div class="modal-section">
+                    <h4>Query</h4>
+                    <p>${data.query}</p>
+                </div>
+                <div class="modal-section">
+                    <h4>Response</h4>
+                    <p>${data.response || "(Truncated)"}</p>
+                </div>
+                <button class="view-profile-btn" onclick="viewUserProfile('${userId}')">
+                    👤 View Full User Profile
+                </button>
+            `;
+            document.getElementById("detailModal").classList.add("active");
+        }
+
+        async function viewUserProfile(userId) {
+            closeModal();
+            document.getElementById("advancedModal").classList.add("active");
+            document.getElementById("advancedModalBody").innerHTML = '<div class="loading" style="color: #64748b;">Loading user profile</div>';
+
+            try {
+                // Load the user's chats first to get their full profile
+                const chatsResponse = await fetch(`/api/analytics/user/${encodeURIComponent(userId)}/chats`, { credentials: 'include' });
+                const chatsData = chatsResponse.ok ? await chatsResponse.json() : { chats: [] };
+
+                // Load users to find this specific one
+                const response = await fetch(`/api/analytics/users?page=1&per_page=100`, { credentials: 'include' });
+                if (response.status === 401) { closeAdvancedModal(); return; }
+                const data = await response.json();
+
+                // Find the specific user
+                const user = data.users.find(u => u.user_id_full === userId || u.ip === userId);
+
+                if (user) {
+                    renderSingleUserProfile(user, chatsData.chats);
+                } else {
+                    document.getElementById("advancedModalBody").innerHTML = '<div style="text-align: center; color: #64748b; padding: 40px;">User not found</div>';
+                }
+            } catch (error) {
+                console.error("Failed to load user profile:", error);
+                document.getElementById("advancedModalBody").innerHTML = '<div style="text-align: center; color: #64748b; padding: 40px;">Failed to load data</div>';
+            }
+        }
+
+        function renderSingleUserProfile(user, chats) {
+            const formatDuration = (ms) => {
+                if (!ms || ms === 0) return "—";
+                const seconds = ms / 1000;
+                if (seconds < 60) return `${Math.round(seconds)}s`;
+                if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+                return `${Math.floor(seconds / 3600)}h ${Math.round((seconds % 3600) / 60)}m`;
+            };
+
+            const formatDate = (isoString) => {
+                if (!isoString) return "—";
+                const d = new Date(isoString);
+                return d.toLocaleDateString("en-NG", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+            };
+
+            const getInitials = (user) => {
+                if (user.location?.city) return user.location.city.substring(0, 2).toUpperCase();
+                if (user.ip) return user.ip.split('.').slice(0, 2).join('.');
+                return "??";
+            };
+
+            // Group chats by session
+            const groupedChats = {};
+            if (chats && chats.length > 0) {
+                chats.forEach(chat => {
+                    const sessionKey = chat.session_id || 'unknown';
+                    if (!groupedChats[sessionKey]) {
+                        groupedChats[sessionKey] = [];
+                    }
+                    groupedChats[sessionKey].push(chat);
+                });
+            }
+            
+            const sessionKeys = Object.keys(groupedChats);
+            const chatsHTML = sessionKeys.length > 0 ? sessionKeys.map((sessionId, idx) => {
+                const sessionChats = groupedChats[sessionId];
+                const firstChat = sessionChats[0];
+                const totalMessages = sessionChats.length;
+                
+                const messagesHTML = sessionChats.map(chat => `
+                    <div class="chat-message user">
+                        <div class="chat-message-label">User</div>
+                        <div class="chat-message-content">${chat.query}</div>
+                    </div>
+                    <div class="chat-message ai">
+                        <div class="chat-message-label">Faith Companion</div>
+                        <div class="chat-message-content">${chat.response || 'No response recorded'}</div>
+                        <div class="chat-message-meta">
+                            <span>${chat.response_time_ms}ms</span>
+                            <span>${chat.topic || 'General'}</span>
+                            ${chat.feedback ? `<span>${chat.feedback === 'positive' ? '👍' : '👎'}</span>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+                
+                return `
+                    <div class="conversation-group">
+                        <div class="conversation-header">
+                            <span>Conversation ${sessionKeys.length - idx} • ${totalMessages} exchange${totalMessages > 1 ? 's' : ''}</span>
+                            <span>${formatDate(firstChat.timestamp)}</span>
+                        </div>
+                        <div class="conversation-messages">
+                            ${messagesHTML}
+                        </div>
+                    </div>
+                `;
+            }).join('') : '<div style="padding: 16px; color: #94a3b8; text-align: center;">No chats found</div>';
+
+            const body = document.getElementById("advancedModalBody");
+            body.innerHTML = `
+                <button onclick="openAdvancedAnalytics()" style="background: #e2e8f0; border: 1px solid #cbd5e1; color: #475569; padding: 8px 16px; border-radius: 8px; cursor: pointer; margin-bottom: 20px; font-size: 0.85rem;">← Back to All Users</button>
+
+                <div class="user-card expanded" style="cursor: default;">
+                    <div class="user-header">
+                        <div class="user-avatar ${user.is_return_visitor ? 'return' : ''}">${getInitials(user)}</div>
+                        <div class="user-main">
+                            <div class="user-name">${user.location?.city || 'Unknown'}, ${user.location?.country || '?'}</div>
+                            <div class="user-location">${user.device?.brand || ''} ${user.device?.model || user.device?.type || ''} · ${user.browser?.name || ''} · ${user.os?.name || ''}</div>
+                        </div>
+                        <div class="user-stats">
+                            <div class="user-stat">
+                                <div class="user-stat-value">${user.stats?.message_count || 0}</div>
+                                <div class="user-stat-label">Messages</div>
+                            </div>
+                            <div class="user-stat">
+                                <div class="user-stat-value">${formatDuration(user.stats?.session_duration_ms)}</div>
+                                <div class="user-stat-label">Duration</div>
+                            </div>
+                            <div class="user-stat">
+                                <div class="user-stat-value">$${(user.stats?.total_cost || 0).toFixed(4)}</div>
+                                <div class="user-stat-label">Cost</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="user-details" style="display: grid;">
+                        <div class="detail-box">
+                            <label>IP Address</label>
+                            <span>${user.ip || '—'}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>ISP</label>
+                            <span>${user.isp || '—'}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>Screen</label>
+                            <span>${user.screen || '—'}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>Language</label>
+                            <span>${user.language || '—'}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>Connection</label>
+                            <span>${user.connection || '—'}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>Color Scheme</label>
+                            <span>${user.color_scheme || '—'}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>Input Type</label>
+                            <span>${user.input_type || '—'}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>Referrer</label>
+                            <span>${user.referrer || 'Direct'}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>First Seen</label>
+                            <span>${formatDate(user.stats?.first_seen)}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>Last Seen</label>
+                            <span>${formatDate(user.stats?.last_seen)}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>Timezone</label>
+                            <span>${user.location?.timezone || '—'}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>Coordinates</label>
+                            <span>${user.location?.lat && user.location?.lng ? `${user.location.lat.toFixed(4)}, ${user.location.lng.toFixed(4)}` : '—'}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <h4 style="color: #1e293b; font-size: 1rem; margin: 24px 0 12px; font-weight: 600;">Conversations (${Object.keys(groupedChats).length} sessions, ${chats?.length || 0} messages)</h4>
+                <div class="user-chats" style="max-height: 400px;">
+                    ${chatsHTML}
+                </div>
+            `;
+        }
+
+        function closeModal() { document.getElementById("detailModal").classList.remove("active"); }
+        document.getElementById("detailModal").addEventListener("click", e => { if (e.target.id === "detailModal") closeModal(); });
+
+        // Advanced Analytics Modal
+        function closeAdvancedModal() { document.getElementById("advancedModal").classList.remove("active"); }
+        document.getElementById("advancedModal").addEventListener("click", e => { if (e.target.id === "advancedModal") closeAdvancedModal(); });
+
+        document.addEventListener("keydown", e => {
+            if (e.key === "Escape") {
+                closeModal();
+                closeAdvancedModal();
+            }
+        });
+
+        let usersPage = 1;
+        let usersData = null;
+
+        async function openAdvancedAnalytics() {
+            document.getElementById("advancedModal").classList.add("active");
+            document.getElementById("advancedModalBody").innerHTML = '<div class="loading" style="color: #64748b;">Loading user profiles</div>';
+            usersPage = 1;
+            await loadUsers();
+        }
+
+        async function loadUsers(page = 1) {
+            usersPage = page;
+            try {
+                const response = await fetch(`/api/analytics/users?page=${page}&per_page=20`, { credentials: 'include' });
+                if (response.status === 401) { closeAdvancedModal(); return; }
+                usersData = await response.json();
+                renderUsers(usersData);
+            } catch (error) {
+                console.error("Failed to load users:", error);
+                document.getElementById("advancedModalBody").innerHTML = '<div style="text-align: center; color: #64748b; padding: 40px;">Failed to load data</div>';
+            }
+        }
+
+        function renderUsers(data) {
+            const formatDuration = (ms) => {
+                if (!ms || ms === 0) return "—";
+                const seconds = ms / 1000;
+                if (seconds < 60) return `${Math.round(seconds)}s`;
+                if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+                return `${Math.floor(seconds / 3600)}h ${Math.round((seconds % 3600) / 60)}m`;
+            };
+
+            const formatDate = (isoString) => {
+                if (!isoString) return "—";
+                const d = new Date(isoString);
+                return d.toLocaleDateString("en-NG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+            };
+
+            const getInitials = (user) => {
+                if (user.location?.city) return user.location.city.substring(0, 2).toUpperCase();
+                if (user.ip) return user.ip.split('.').slice(0, 2).join('.');
+                return "??";
+            };
+
+            const body = document.getElementById("advancedModalBody");
+
+            const usersHTML = data.users.map(user => `
+                <div class="user-card" onclick="toggleUserCard(this, '${user.user_id_full}')">
+                    <div class="user-header">
+                        <div class="user-avatar ${user.is_return_visitor ? 'return' : ''}">${getInitials(user)}</div>
+                        <div class="user-main">
+                            <div class="user-name">${user.location?.city || 'Unknown'}, ${user.location?.country || '?'}</div>
+                            <div class="user-location">${user.device?.brand || ''} ${user.device?.model || user.device?.type || ''} · ${user.browser?.name || ''} · ${user.os?.name || ''}</div>
+                        </div>
+                        <div class="user-stats">
+                            <div class="user-stat">
+                                <div class="user-stat-value">${user.stats?.message_count || 0}</div>
+                                <div class="user-stat-label">Messages</div>
+                            </div>
+                            <div class="user-stat">
+                                <div class="user-stat-value">${formatDuration(user.stats?.session_duration_ms)}</div>
+                                <div class="user-stat-label">Duration</div>
+                            </div>
+                            <div class="user-stat">
+                                <div class="user-stat-value">$${(user.stats?.total_cost || 0).toFixed(4)}</div>
+                                <div class="user-stat-label">Cost</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="user-details">
+                        <div class="detail-box">
+                            <label>IP Address</label>
+                            <span>${user.ip || '—'}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>ISP</label>
+                            <span>${user.isp || '—'}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>Screen</label>
+                            <span>${user.screen || '—'}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>Language</label>
+                            <span>${user.language || '—'}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>Connection</label>
+                            <span>${user.connection || '—'}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>Color Scheme</label>
+                            <span>${user.color_scheme || '—'}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>Input Type</label>
+                            <span>${user.input_type || '—'}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>Referrer</label>
+                            <span>${user.referrer || 'Direct'}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>First Seen</label>
+                            <span>${formatDate(user.stats?.first_seen)}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>Last Seen</label>
+                            <span>${formatDate(user.stats?.last_seen)}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>Timezone</label>
+                            <span>${user.location?.timezone || '—'}</span>
+                        </div>
+                        <div class="detail-box">
+                            <label>Coordinates</label>
+                            <span>${user.location?.lat && user.location?.lng ? `${user.location.lat.toFixed(2)}, ${user.location.lng.toFixed(2)}` : '—'}</span>
+                        </div>
+                        <div class="user-chats" id="chats-${user.user_id_full?.replace(/[^a-zA-Z0-9]/g, '')}">
+                            <div style="padding: 16px; color: #94a3b8; text-align: center;">Click to load chat history...</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            const pag = data.pagination;
+
+            body.innerHTML = `
+                <div class="users-summary">
+                    <div class="summary-stat">
+                        <div class="summary-stat-value">${pag.total}</div>
+                        <div class="summary-stat-label">Total Users</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-value accent">${data.users.filter(u => u.is_return_visitor).length}</div>
+                        <div class="summary-stat-label">Return Visitors (this page)</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-value purple">${data.users.reduce((sum, u) => sum + (u.stats?.message_count || 0), 0)}</div>
+                        <div class="summary-stat-label">Messages (this page)</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-value">$${data.users.reduce((sum, u) => sum + (u.stats?.total_cost || 0), 0).toFixed(4)}</div>
+                        <div class="summary-stat-label">Cost (this page)</div>
+                    </div>
+                </div>
+                <div class="users-grid">
+                    ${usersHTML || '<div style="text-align: center; color: #64748b; padding: 40px;">No users yet</div>'}
+                </div>
+                <div class="users-pagination">
+                    <button onclick="loadUsers(1)" ${pag.page === 1 ? 'disabled' : ''}>«</button>
+                    <button onclick="loadUsers(${pag.page - 1})" ${!pag.has_prev ? 'disabled' : ''}>‹ Prev</button>
+                    <span class="page-info">${pag.page} / ${pag.total_pages}</span>
+                    <button onclick="loadUsers(${pag.page + 1})" ${!pag.has_next ? 'disabled' : ''}>Next ›</button>
+                    <button onclick="loadUsers(${pag.total_pages})" ${pag.page === pag.total_pages ? 'disabled' : ''}>»</button>
+                </div>
+            `;
+        }
+
+        async function toggleUserCard(card, userId) {
+            const wasExpanded = card.classList.contains('expanded');
+
+            // Collapse all cards first
+            document.querySelectorAll('.user-card.expanded').forEach(c => c.classList.remove('expanded'));
+
+            if (!wasExpanded) {
+                card.classList.add('expanded');
+                // Load user's chats
+                const chatsContainer = card.querySelector('.user-chats');
+                if (chatsContainer && chatsContainer.innerHTML.includes('Click to load')) {
+                    chatsContainer.innerHTML = '<div style="padding: 16px; color: #94a3b8; text-align: center;">Loading chats...</div>';
+                    try {
+                        const response = await fetch(`/api/analytics/user/${encodeURIComponent(userId)}/chats`, { credentials: 'include' });
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.chats && data.chats.length > 0) {
+                                chatsContainer.innerHTML = data.chats.map(chat => `
+                                    <div class="user-chat-item">
+                                        <div class="chat-query">${chat.query}</div>
+                                        <div class="chat-meta">
+                                            <span>${new Date(chat.timestamp).toLocaleString("en-NG", {month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"})}</span>
+                                            <span>${chat.topic || 'General'}</span>
+                                            <span>${chat.response_time_ms}ms</span>
+                                            ${chat.feedback ? `<span>${chat.feedback === 'positive' ? '👍' : '👎'}</span>` : ''}
+                                        </div>
+                                    </div>
+                                `).join('');
+                            } else {
+                                chatsContainer.innerHTML = '<div style="padding: 16px; color: #94a3b8; text-align: center;">No chats found</div>';
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Failed to load chats:", e);
+                    }
+                }
+            }
+        }
+
+        loadAllData();
+
+        // Conversations Modal
+        let convPage = 1;
+
+        function closeConversationsModal() {
+            document.getElementById("conversationsModal").classList.remove("active");
+        }
+        
+        document.getElementById("conversationsModal").addEventListener("click", e => {
+            if (e.target.id === "conversationsModal") closeConversationsModal();
+        });
+
+        async function openConversationsModal() {
+            document.getElementById("conversationsModal").classList.add("active");
+            document.getElementById("conversationsModalBody").innerHTML = '<div style="padding: 40px; text-align: center; color: #64748b;">Loading conversations...</div>';
+            convPage = 1;
+            await loadConversations();
+        }
+
+        async function loadConversations(page = 1) {
+            convPage = page;
+            try {
+                const response = await fetch(`/api/analytics/conversations?page=${page}&per_page=10`, { credentials: 'include' });
+                if (response.status === 401) { closeConversationsModal(); return; }
+                const data = await response.json();
+                renderConversations(data);
+            } catch (error) {
+                document.getElementById("conversationsModalBody").innerHTML = '<div style="text-align: center; color: #64748b; padding: 40px;">Failed to load</div>';
+            }
+        }
+
+        function renderConversations(data) {
+            const formatDate = (iso) => {
+                if (!iso) return "-";
+                return new Date(iso).toLocaleDateString("en-NG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+            };
+
+            const html = data.conversations && data.conversations.length > 0 
+                ? data.conversations.map((conv, idx) => {
+                    const msgs = conv.messages.map(m => `
+                        <div class="conv-message user-msg">
+                            <div class="conv-msg-header">
+                                <span class="conv-msg-label">User</span>
+                                <span class="conv-msg-time">${formatDate(m.timestamp)}</span>
+                            </div>
+                            <div class="conv-msg-content">${m.query}</div>
+                        </div>
+                        <div class="conv-message ai-msg">
+                            <div class="conv-msg-header">
+                                <span class="conv-msg-label">Faith Companion</span>
+                            </div>
+                            <div class="conv-msg-content">${m.response || 'No response'}</div>
+                            <div class="conv-msg-footer">
+                                <span>${m.response_time_ms}ms</span>
+                                <span>${m.topic || 'General'}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                    return `
+                        <div class="conv-card" id="conv-${idx}">
+                            <div class="conv-header" onclick="toggleConv('conv-${idx}')">
+                                <div class="conv-meta">
+                                    <span>📍 ${conv.location || 'Unknown'}</span>
+                                    <span>💬 ${conv.message_count} msg${conv.message_count > 1 ? 's' : ''}</span>
+                                    <span>📅 ${formatDate(conv.last_message)}</span>
+                                </div>
+                                <span class="expand-icon">▼</span>
+                            </div>
+                            <div class="conv-body">${msgs}</div>
+                        </div>
+                    `;
+                }).join('')
+                : '<div style="padding: 40px; text-align: center;">No conversations</div>';
+
+            const pag = data.pagination;
+            const pagHtml = `
+                <div class="conv-pagination">
+                    <button onclick="loadConversations(${pag.page - 1})" ${pag.page <= 1 ? 'disabled' : ''}>← Prev</button>
+                    <span>Page ${pag.page} of ${pag.total_pages}</span>
+                    <button onclick="loadConversations(${pag.page + 1})" ${!pag.has_next ? 'disabled' : ''}>Next →</button>
+                </div>
+            `;
+
+            document.getElementById("conversationsModalBody").innerHTML = `
+                <div class="conversations-container">
+                    <div class="conversations-list">${html}</div>
+                    ${pagHtml}
+                </div>
+            `;
+        }
+
+        function toggleConv(id) {
+            document.getElementById(id).classList.toggle('expanded');
+        }
+
+
+        // Feedback Modal
+        let feedbackPage = 1;
+
+        function openFeedbackModal() {
+            document.getElementById("feedbackModal").classList.add("active");
+            loadFeedback(1);
+        }
+
+        function closeFeedbackModal() {
+            document.getElementById("feedbackModal").classList.remove("active");
+        }
+
+        document.getElementById("feedbackModal").addEventListener("click", e => {
+            if (e.target.id === "feedbackModal") closeFeedbackModal();
+        });
+
+        async function loadFeedback(page = 1) {
+            feedbackPage = page;
+            const typeFilter = document.getElementById("feedbackTypeFilter").value;
+            const url = `/api/analytics/feedback/list?page=${page}&per_page=15${typeFilter ? '&feedback_type=' + typeFilter : ''}`;
+
+            try {
+                const response = await fetch(url, { credentials: 'include' });
+                if (response.status === 401) {
+                    closeFeedbackModal();
+                    return;
+                }
+                const data = await response.json();
+                renderFeedback(data);
+            } catch (error) {
+                document.getElementById("feedbackModalBody").innerHTML =
+                    '<div class="no-feedback">Failed to load feedback</div>';
+            }
+        }
+
+        function renderFeedback(data) {
+            const formatDate = (iso) => {
+                if (!iso) return "-";
+                return new Date(iso).toLocaleDateString("en-NG", {
+                    month: "short", day: "numeric", year: "numeric",
+                    hour: "2-digit", minute: "2-digit"
+                });
+            };
+
+            let html = '';
+
+            if (data.feedback && data.feedback.length > 0) {
+                html = '<div class="feedback-list">';
+                data.feedback.forEach(fb => {
+                    const typeClass = fb.feedback_type;
+                    const typeLabel = fb.feedback_type === 'positive' ? 'Positive' : 'Negative';
+                    const commentHtml = fb.comment
+                        ? `<div class="feedback-comment">
+                               <div class="feedback-comment-label">User Comment</div>
+                               "${fb.comment}"
+                           </div>`
+                        : '';
+
+                    html += `
+                        <div class="feedback-item ${typeClass}">
+                            <div class="feedback-header">
+                                <span class="feedback-type ${typeClass}">${typeLabel}</span>
+                                <span class="feedback-meta">${formatDate(fb.timestamp)} | ${fb.location || 'Unknown'}</span>
+                            </div>
+                            ${commentHtml}
+                            <div class="feedback-qa">
+                                <div class="feedback-qa-label">Question</div>
+                                <div class="feedback-qa-content">${fb.user_query || 'N/A'}</div>
+                            </div>
+                            <div class="feedback-qa" style="margin-top: 8px;">
+                                <div class="feedback-qa-label">Response (truncated)</div>
+                                <div class="feedback-qa-content">${fb.ai_response || 'N/A'}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+
+                // Pagination
+                const pag = data.pagination;
+                html += `
+                    <div class="conv-pagination">
+                        <button onclick="loadFeedback(${pag.page - 1})" ${pag.page <= 1 ? 'disabled' : ''}>Prev</button>
+                        <span>Page ${pag.page} of ${pag.total_pages} (${pag.total} total)</span>
+                        <button onclick="loadFeedback(${pag.page + 1})" ${!pag.has_next ? 'disabled' : ''}>Next</button>
+                    </div>
+                `;
+            } else {
+                html = '<div class="no-feedback">No feedback found</div>';
+            }
+
+            document.getElementById("feedbackModalBody").innerHTML = html;
+        }
+
+        function exportFeedback() {
+            const typeFilter = document.getElementById("feedbackTypeFilter").value;
+            const url = `/api/analytics/feedback/export${typeFilter ? '?feedback_type=' + typeFilter : ''}`;
+            window.open(url, '_blank');
+        }
+
+
+        // Spiritual Direction Admin
+        function openSpiritualDirectionAdmin() {
+            document.getElementById("spiritualDirectionAdminModal").classList.add("active");
+            loadSpiritualDirectionRequests();
+        }
+
+        function closeSpiritualDirectionAdmin() {
+            document.getElementById("spiritualDirectionAdminModal").classList.remove("active");
+        }
+
+        document.getElementById("spiritualDirectionAdminModal").addEventListener("click", e => {
+            if (e.target.id === "spiritualDirectionAdminModal") closeSpiritualDirectionAdmin();
+        });
+
+        async function loadSpiritualDirectionRequests(statusFilter = '') {
+            try {
+                const url = statusFilter
+                    ? `/api/admin/spiritual-direction?status=${statusFilter}`
+                    : '/api/admin/spiritual-direction';
+                const response = await fetch(url, { credentials: 'include' });
+                if (response.status === 401) {
+                    closeSpiritualDirectionAdmin();
+                    return;
+                }
+                const data = await response.json();
+                renderSpiritualDirectionRequests(data.requests, statusFilter);
+            } catch (error) {
+                document.getElementById("sdAdminBody").innerHTML =
+                    '<div style="text-align: center; padding: 40px; color: #64748b;">Failed to load requests</div>';
+            }
+        }
+
+        function renderSpiritualDirectionRequests(requests, currentFilter) {
+            const formatDate = (iso) => {
+                if (!iso) return "-";
+                return new Date(iso).toLocaleDateString("en-NG", {
+                    month: "short", day: "numeric", year: "numeric",
+                    hour: "2-digit", minute: "2-digit"
+                });
+            };
+
+            const pending = requests.filter(r => r.status === 'pending').length;
+            const contacted = requests.filter(r => r.status === 'contacted').length;
+            const done = requests.filter(r => r.status === 'followed_up').length;
+
+            const typeLabels = {
+                'spiritual_direction': 'Spiritual Direction',
+                'confession': 'Confession',
+                'both': 'Both'
+            };
+
+            let html = `
+                <div class="sd-stats">
+                    <div class="sd-stat"><span class="dot pending"></span> ${pending} Pending</div>
+                    <div class="sd-stat"><span class="dot contacted"></span> ${contacted} Contacted</div>
+                    <div class="sd-stat"><span class="dot done"></span> ${done} Completed</div>
+                </div>
+                <div class="sd-filter-bar" style="justify-content: space-between;">
+                    <select onchange="loadSpiritualDirectionRequests(this.value)">
+                        <option value="" ${!currentFilter ? 'selected' : ''}>All Requests</option>
+                        <option value="pending" ${currentFilter === 'pending' ? 'selected' : ''}>Pending Only</option>
+                        <option value="contacted" ${currentFilter === 'contacted' ? 'selected' : ''}>Contacted</option>
+                        <option value="followed_up" ${currentFilter === 'followed_up' ? 'selected' : ''}>Completed</option>
+                    </select>
+                    <button class="sd-export-btn" onclick="exportSpiritualDirectionCSV()">📥 Download CSV</button>
+                </div>
+            `;
+
+            if (requests.length === 0) {
+                html += '<div style="text-align: center; padding: 40px; color: #64748b;">No requests found</div>';
+            } else {
+                html += '<div class="sd-request-list">';
+                requests.forEach(req => {
+                    const messageHtml = req.message
+                        ? `<div class="sd-request-message">"${req.message}"</div>`
+                        : '';
+                    const notesHtml = req.notes
+                        ? `<div style="font-size: 0.85rem; background: #fef3c7; padding: 8px 12px; border-radius: 6px; margin-top: 10px; color: #92400e;"><strong>Notes:</strong> ${req.notes}</div>`
+                        : '';
+
+                    html += `
+                        <div class="sd-request-card ${req.status}">
+                            <div class="sd-request-header">
+                                <span class="sd-request-name">${req.name}</span>
+                                <span class="sd-request-type ${req.request_type}">${typeLabels[req.request_type] || req.request_type}</span>
+                            </div>
+                            <div class="sd-request-contact">
+                                <span>📱 <a href="tel:${req.phone}">${req.phone}</a></span>
+                                ${req.email ? `<span>✉️ <a href="mailto:${req.email}">${req.email}</a></span>` : ''}
+                            </div>
+                            ${messageHtml}
+                            ${notesHtml}
+                            <div class="sd-request-footer">
+                                <span>Submitted: ${formatDate(req.timestamp)}${req.followed_up_at ? ` · Completed: ${formatDate(req.followed_up_at)}` : ''}</span>
+                                <div class="sd-request-actions">
+                                    ${req.status === 'pending' ? `<button class="sd-btn-contact" onclick="updateSDRequest(${req.id}, 'contacted')">Mark Contacted</button>` : `<button class="sd-btn-reset" onclick="updateSDRequest(${req.id}, 'pending')">Reset</button>`}
+                                    ${req.status !== 'followed_up' ? `<button class="sd-btn-done" onclick="updateSDRequest(${req.id}, 'followed_up')">Mark Done</button>` : ''}
+                                    <button class="sd-btn-delete" onclick="deleteSDRequest(${req.id}, '${req.name}')">Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+
+            document.getElementById("sdAdminBody").innerHTML = html;
+        }
+
+        
+        async function deleteSDRequest(id, name) {
+            if (!confirm(`Are you sure you want to delete the request from "${name}"? This cannot be undone.`)) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/admin/spiritual-direction/${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                if (response.ok) {
+                    loadSpiritualDirectionRequests();
+                    loadRequestsBadge();
+                } else {
+                    alert('Failed to delete request');
+                }
+            } catch (error) {
+                alert('Error deleting request');
+            }
+        }
+
+        function exportSpiritualDirectionCSV() {
+            window.open('/api/admin/spiritual-direction/export', '_blank');
+        }
+
+async function updateSDRequest(id, status) {
+            const notes = status === 'followed_up' ? prompt('Any notes about this follow-up? (optional)') : null;
+            try {
+                const response = await fetch(`/api/admin/spiritual-direction/${id}?status=${status}${notes ? '&notes=' + encodeURIComponent(notes) : ''}`, {
+                    method: 'PUT',
+                    credentials: 'include'
+                });
+                if (response.ok) {
+                    loadSpiritualDirectionRequests();
+                }
+            } catch (error) {
+                alert('Failed to update request');
+            }
+        }
+
+    function logout() { window.location.href = "/admin/logout"; }
+    </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  faith-companion:
+    build: .
+    container_name: faith-companion
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./documents:/app/documents:ro
+      - ./frontend:/app/frontend:ro
+      - ./data:/app/data
+    networks:
+      - n8n-compose_default
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.faithcompanion.rule=Host(`fc.catholic.ng`)
+      - traefik.http.routers.faithcompanion.entrypoints=web,websecure
+      - traefik.http.routers.faithcompanion.tls=true
+      - traefik.http.routers.faithcompanion.tls.certresolver=mytlschallenge
+      - traefik.http.services.faithcompanion.loadbalancer.server.port=8000
+      - traefik.http.middlewares.faithcompanion.headers.SSLRedirect=true
+      - traefik.http.middlewares.faithcompanion.headers.STSSeconds=315360000
+      - traefik.http.middlewares.faithcompanion.headers.STSIncludeSubdomains=true
+      - traefik.http.middlewares.faithcompanion.headers.STSPreload=true
+      - traefik.http.middlewares.faithcompanion.headers.forceSTSHeader=true
+      - traefik.http.routers.faithcompanion.middlewares=faithcompanion@docker
+
+networks:
+  n8n-compose_default:
+    external: true

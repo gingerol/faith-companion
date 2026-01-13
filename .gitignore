@@ -1,0 +1,33 @@
+# Environment files (contain secrets)
+.env
+.env.local
+.env.production
+
+# Data directories
+data/
+documents/*.pdf
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.log
+
+# Claude
+.claude/
