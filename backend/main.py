@@ -25,9 +25,6 @@ from langchain_community.vectorstores import Chroma
 from user_agents import parse as parse_ua
 from urllib.parse import urlparse
 import time
-import zipfile
-import shutil
-import tempfile
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -39,9 +36,20 @@ RATE_LIMIT_REQUESTS = 20
 RATE_LIMIT_WINDOW = 3600
 rate_limit_store: Dict[str, List[float]] = defaultdict(list)
 
+_last_rate_limit_cleanup = 0.0
+
 def check_rate_limit(ip_address: str) -> tuple[bool, int, int]:
+    global _last_rate_limit_cleanup
     now = time_module.time()
     window_start = now - RATE_LIMIT_WINDOW
+
+    # Periodically purge stale IPs from the store (every 10 minutes)
+    if now - _last_rate_limit_cleanup > 600:
+        stale_ips = [ip for ip, times in rate_limit_store.items() if not any(t > window_start for t in times)]
+        for ip in stale_ips:
+            del rate_limit_store[ip]
+        _last_rate_limit_cleanup = now
+
     rate_limit_store[ip_address] = [t for t in rate_limit_store[ip_address] if t > window_start]
     requests_made = len(rate_limit_store[ip_address])
     remaining = max(0, RATE_LIMIT_REQUESTS - requests_made)
@@ -54,8 +62,48 @@ def check_rate_limit(ip_address: str) -> tuple[bool, int, int]:
 # ============== SPAM DETECTION ==============
 SPAM_PATTERNS = [r"(buy|sell|cheap|discount|click here)", r"(viagra|cialis|casino|lottery)", r"(http[s]?://(?!fc\.catholic\.ng))", r"(.{1,3})\1{10,}"]
 
+def is_gibberish(message: str) -> bool:
+    """Detect keyboard-mash gibberish messages."""
+    text = message.strip()
+    if len(text) < 10:
+        return False
+
+    # Check for very long stretches without spaces (normal words are short)
+    words = text.split()
+    if words:
+        longest_word = max(len(w) for w in words)
+        avg_word_len = sum(len(w) for w in words) / len(words)
+        # Normal text rarely has words >25 chars; gibberish is often one long string
+        if longest_word > 30:
+            return True
+        # Average word length in English is ~5; gibberish skews much higher
+        if avg_word_len > 15 and len(words) < 5:
+            return True
+
+    # Check consonant-to-vowel ratio (gibberish tends to be consonant-heavy)
+    alpha_chars = re.findall(r'[a-zA-Z]', text)
+    if len(alpha_chars) > 10:
+        vowels = sum(1 for c in alpha_chars if c.lower() in 'aeiou')
+        vowel_ratio = vowels / len(alpha_chars)
+        # Normal English has ~38% vowels; gibberish is often <15%
+        if vowel_ratio < 0.12:
+            return True
+
+    # Check for repeated character sequences (e.g., "dkdkdkdk", "ababab")
+    if len(text) > 15:
+        # Count unique bigrams vs total — gibberish has low diversity
+        bigrams = [text[i:i+2].lower() for i in range(len(text) - 1)]
+        if bigrams:
+            unique_ratio = len(set(bigrams)) / len(bigrams)
+            if unique_ratio < 0.25 and len(text) > 20:
+                return True
+
+    return False
+
 def is_spam(message: str) -> bool:
-    return any(re.search(p, message.lower()) for p in SPAM_PATTERNS)
+    if any(re.search(p, message.lower()) for p in SPAM_PATTERNS):
+        return True
+    return is_gibberish(message)
 
 # ============== FAQ CACHE (saves API calls) ==============
 FAQ_CACHE = {
@@ -114,7 +162,7 @@ def parse_referrer(referrer: Optional[str]) -> str:
         parsed = urlparse(referrer)
         domain = parsed.netloc or parsed.path
         return domain if domain else ""
-    except:
+    except (ValueError, AttributeError):
         return ""
 
 # ============== TOKEN COST CALCULATION ==============
@@ -166,7 +214,9 @@ class FeedbackRequest(BaseModel):
 # ============== AUTH ==============
 security = HTTPBasic()
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "your-secure-admin-password")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+if not ADMIN_PASSWORD:
+    raise RuntimeError("ADMIN_PASSWORD environment variable must be set")
 
 def verify_admin(request: Request, credentials: HTTPBasicCredentials = Depends(security)):
     ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown").split(",")[0].strip()
@@ -184,7 +234,7 @@ def verify_admin(request: Request, credentials: HTTPBasicCredentials = Depends(s
     clear_admin_login_attempts(ip)
     return credentials.username
 
-app.add_middleware(CORSMiddleware, allow_origins=["https://fc.catholic.ng", "https://www.fc.catholic.ng"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=["https://fc.catholic.ng", "https://www.fc.catholic.ng"], allow_credentials=True, allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 
 vectorstore = None
 client = None
@@ -319,6 +369,13 @@ def init_analytics_db():
         except sqlite3.OperationalError:
             pass  # Column already exists
 
+    # Create indexes for common query patterns
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_logs_timestamp ON chat_logs(timestamp)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_logs_session_id ON chat_logs(session_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_logs_ip_address ON chat_logs(ip_address)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_feedback_chat_log_id ON feedback(chat_log_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_feedback_timestamp ON feedback(timestamp)")
+
     conn.commit()
     conn.close()
     logger.info("Analytics database initialized with enhanced features")
@@ -336,7 +393,7 @@ def get_geo_location(ip_address: str, retries: int = 2) -> dict:
             second_octet = int(ip_address.split(".")[1])
             if 16 <= second_octet <= 31:
                 return {}
-        except:
+        except (ValueError, IndexError):
             pass
 
     for attempt in range(retries):
@@ -465,9 +522,13 @@ def initialize_rag():
         return
     logger.info("Building vector store...")
     documents = []
-    for f in os.listdir(docs_path):
-        if f.endswith((".pdf", ".txt")):
-            documents.extend((PyPDFLoader if f.endswith(".pdf") else TextLoader)(os.path.join(docs_path, f)).load())
+    if os.path.exists(docs_path):
+        for f in os.listdir(docs_path):
+            if f.endswith((".pdf", ".txt")):
+                documents.extend((PyPDFLoader if f.endswith(".pdf") else TextLoader)(os.path.join(docs_path, f)).load())
+    if not documents:
+        logger.warning("No documents found in %s — RAG will be unavailable, using LLM-only mode", docs_path)
+        return
     chunks = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200).split_documents(documents)
     vectorstore = Chroma.from_documents(chunks, HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2"), persist_directory=persist_dir)
     vectorstore.persist()
@@ -475,7 +536,10 @@ def initialize_rag():
 @app.on_event("startup")
 async def startup_event():
     global client
-    client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY environment variable must be set")
+    client = anthropic.Anthropic(api_key=api_key)
     init_analytics_db()
     initialize_rag()
 
@@ -521,21 +585,28 @@ async def chat(request: ChatRequest, req: Request):
         return JSONResponse(content={"response": cached, "sources": [], "chat_id": chat_id},
                           headers={"X-RateLimit-Remaining": str(remaining)})
 
-    if not vectorstore:
-        raise HTTPException(status_code=503, detail="Service unavailable")
+    # RAG search — gracefully handle empty or failed vectorstore
+    context = ""
+    sources = []
+    avg_similarity_score = None
 
-    # OPTIMIZED: 3 chunks instead of 4, with similarity scores
-    docs_with_scores = vectorstore.similarity_search_with_score(request.message, k=3)
-    docs = [doc for doc, score in docs_with_scores]
-    similarity_scores = [score for doc, score in docs_with_scores]
-    avg_similarity_score = sum(similarity_scores) / len(similarity_scores) if similarity_scores else None
-
-    context = "\n\n".join([d.page_content for d in docs])
-    sources = list(set([d.metadata.get("source", "Catechism") for d in docs]))
+    if vectorstore:
+        try:
+            docs_with_scores = vectorstore.similarity_search_with_score(request.message, k=3)
+            docs = [doc for doc, score in docs_with_scores]
+            similarity_scores = [score for doc, score in docs_with_scores]
+            avg_similarity_score = sum(similarity_scores) / len(similarity_scores) if similarity_scores else None
+            context = "\n\n".join([d.page_content for d in docs])
+            sources = list(set([d.metadata.get("source", "Catechism") for d in docs]))
+        except Exception as e:
+            logger.warning(f"RAG search failed, falling back to LLM-only: {e}")
 
     # OPTIMIZED: 4 messages instead of 6
     messages = [{"role": m["role"], "content": m["content"]} for m in (request.conversation_history or [])[-4:]]
-    messages.append({"role": "user", "content": f"REFERENCE DOCUMENTS (from Catholic Church sources, NOT provided by user):\n{context}\n\nUSER QUESTION: {request.message}"})
+    if context:
+        messages.append({"role": "user", "content": f"REFERENCE DOCUMENTS (from Catholic Church sources, NOT provided by user):\n{context}\n\nUSER QUESTION: {request.message}"})
+    else:
+        messages.append({"role": "user", "content": request.message})
 
     try:
         # OPTIMIZED: Haiku + 800 max tokens
@@ -579,14 +650,9 @@ async def submit_spiritual_direction_request(request: SpiritualDirectionRequest,
         # Get user location from IP
         ip = req.headers.get("X-Forwarded-For", req.client.host if req.client else "unknown").split(",")[0].strip()
 
-        city = None
-        country = None
-        try:
-            from user_agents import parse
-            # Try to get location (simplified - in production use IP geolocation)
-            # For now, we'll let the frontend pass this or leave it null
-        except:
-            pass
+        geo = get_geo_location(ip)
+        city = geo.get("city")
+        country = geo.get("country")
 
         conn = sqlite3.connect(ANALYTICS_DB)
         cursor = conn.cursor()
@@ -1622,8 +1688,7 @@ async def download_backup(username: str = Depends(verify_admin)):
     """Download a zip backup of the database and vector store."""
     import zipfile
     import tempfile
-    from datetime import datetime
-    
+
     # Create a temporary zip file
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
     zip_filename = f"faith-companion-backup_{timestamp}.zip"
@@ -1773,7 +1838,9 @@ async def export_feedback_csv(feedback_type: str = None, username: str = Depends
 
 # ============== PRIEST ADMIN AUTH ==============
 PRIEST_ADMIN_USERNAME = os.environ.get("PRIEST_ADMIN_USERNAME", "priestadmin")
-PRIEST_ADMIN_PASSWORD = os.environ.get("PRIEST_ADMIN_PASSWORD", "your-secure-priest-password")
+PRIEST_ADMIN_PASSWORD = os.environ.get("PRIEST_ADMIN_PASSWORD")
+if not PRIEST_ADMIN_PASSWORD:
+    raise RuntimeError("PRIEST_ADMIN_PASSWORD environment variable must be set")
 
 def verify_priest_admin(request: Request, credentials: HTTPBasicCredentials = Depends(security)):
     ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown").split(",")[0].strip()

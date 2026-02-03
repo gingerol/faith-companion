@@ -809,11 +809,13 @@
                 });
 
                 if (response.ok) {
+                    const safeName = escapeHtml(name);
+                    const serviceType = requestType === 'both' ? 'spiritual direction and confession' : escapeHtml(requestType.replace('_', ' '));
                     document.getElementById('sdModalBody').innerHTML = `
                         <div class="sd-success">
                             <div class="icon">✅</div>
                             <h3>Request Submitted!</h3>
-                            <p>Thank you, ${name}. Fr Kennedy will contact you soon to arrange your ${requestType === 'both' ? 'spiritual direction and confession' : requestType.replace('_', ' ')}.</p>
+                            <p>Thank you, ${safeName}. Fr Kennedy will contact you soon to arrange your ${serviceType}.</p>
                             <button class="sd-btn sd-btn-primary" style="margin-top: 20px; width: 100%;" onclick="closeSpiritualDirectionModal()">Close</button>
                         </div>
                     `;
@@ -1133,8 +1135,14 @@
             }
         }
 
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.appendChild(document.createTextNode(text));
+            return div.innerHTML;
+        }
+
         function formatMessage(text) {
-            return text
+            return escapeHtml(text)
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
                 .replace(/\n/g, '<br>');

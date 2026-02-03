@@ -5,7 +5,6 @@
 
 # Data directories
 data/
-documents/*.pdf
 
 # Python
 __pycache__/
