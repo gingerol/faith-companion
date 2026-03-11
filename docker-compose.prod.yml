@@ -1,0 +1,49 @@
+# Production Docker Compose Configuration
+# Copy this file to docker-compose.override.yml and customize for your setup
+
+version: '3.8'
+
+services:
+  faith-companion:
+    # Remove the ports mapping since we'll use reverse proxy
+    ports: []
+    
+    # Add Traefik labels for SSL and domain routing
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.faithcompanion.rule=Host(`${DOMAIN:-your-domain.com}`)
+      - traefik.http.routers.faithcompanion.entrypoints=web,websecure
+      - traefik.http.routers.faithcompanion.tls=true
+      - traefik.http.routers.faithcompanion.tls.certresolver=letsencrypt
+      - traefik.http.services.faithcompanion.loadbalancer.server.port=8000
+      
+      # Security headers
+      - traefik.http.middlewares.faithcompanion.headers.SSLRedirect=true
+      - traefik.http.middlewares.faithcompanion.headers.STSSeconds=315360000
+      - traefik.http.middlewares.faithcompanion.headers.STSIncludeSubdomains=true
+      - traefik.http.middlewares.faithcompanion.headers.STSPreload=true
+      - traefik.http.middlewares.faithcompanion.headers.forceSTSHeader=true
+      - traefik.http.routers.faithcompanion.middlewares=faithcompanion@docker
+    
+    # Connect to Traefik network
+    networks:
+      - traefik
+    
+    # Production-specific environment
+    environment:
+      - ENV=production
+      
+    # Persistent storage for production
+    volumes:
+      - ./documents:/app/documents:ro
+      - ./frontend:/app/frontend:ro
+      - ./config:/app/config:ro
+      - faith-companion-data:/app/data
+
+networks:
+  traefik:
+    external: true
+
+volumes:
+  faith-companion-data:
+    driver: local

@@ -111,11 +111,11 @@ FAQ_CACHE = {
     "today readings": "I'm sorry, I don't have access to daily Mass readings at this time. For today's readings, I recommend visiting Vatican News (vaticannews.va/en/word-of-the-day.html) or the USCCB website (bible.usccb.org/daily-bible-reading). Your parish bulletin may also have the readings listed.",
     "daily readings": "I'm sorry, I don't have access to daily Mass readings at this time. For today's readings, I recommend visiting Vatican News (vaticannews.va/en/word-of-the-day.html) or the USCCB website (bible.usccb.org/daily-bible-reading). Your parish bulletin may also have the readings listed.",
     "gospel today": "I'm sorry, I don't have access to daily Mass readings at this time. For today's Gospel, I recommend visiting Vatican News (vaticannews.va/en/word-of-the-day.html) or the USCCB website (bible.usccb.org/daily-bible-reading).",
-    "mass schedule": "I don't have access to parish Mass schedules, as these vary by location. Please contact your local parish directly or visit the Diocese of Port Harcourt website (catholicdioceseofportharcourt.com) for information about Mass times in your area.",
-    "mass times": "I don't have access to parish Mass schedules, as these vary by location. Please contact your local parish directly or visit the Diocese of Port Harcourt website (catholicdioceseofportharcourt.com) for information about Mass times in your area.",
-    "what time is mass": "I don't have access to parish Mass schedules, as these vary by location. Please contact your local parish directly or visit the Diocese of Port Harcourt website (catholicdioceseofportharcourt.com) for information about Mass times in your area.",
-    "what is this": "I am Faith Companion, your AI guide to Catholic teaching from the Diocese of Port Harcourt. I can help with questions about doctrine, Scripture, sacraments, and living the faith. How can I help you?",
-    "who are you": "I am Faith Companion, your AI guide to Catholic teaching from the Diocese of Port Harcourt. I can help with questions about doctrine, Scripture, sacraments, and living the faith. How can I help you?",
+    "mass schedule": "I don't have access to parish Mass schedules, as these vary by location. Please contact your local parish directly or visit your diocesan website for information about Mass times in your area.",
+    "mass times": "I don't have access to parish Mass schedules, as these vary by location. Please contact your local parish directly or visit your diocesan website for information about Mass times in your area.",
+    "what time is mass": "I don't have access to parish Mass schedules, as these vary by location. Please contact your local parish directly or visit your diocesan website for information about Mass times in your area.",
+    "what is this": "I am Faith Companion, your AI guide to Catholic teaching. I can help with questions about doctrine, Scripture, sacraments, and living the faith. How can I help you?",
+    "who are you": "I am Faith Companion, your AI guide to Catholic teaching. I can help with questions about doctrine, Scripture, sacraments, and living the faith. How can I help you?",
     "what can you do": "I can help you understand Catholic teaching, explore Scripture, learn about sacraments, and answer faith questions. I draw from the Catechism, Vatican II, Canon Law, and papal documents. What would you like to know?",
     "hello": "Hello! I'm Faith Companion, here to help you explore the Catholic faith. What question can I help you with today?",
     "hi": "Hello! I'm Faith Companion, here to help you explore the Catholic faith. What question can I help you with today?",
@@ -240,25 +240,28 @@ vectorstore = None
 client = None
 ANALYTICS_DB = "/app/data/analytics.db"
 
-# OPTIMIZED: Shorter system prompt (~200 tokens vs ~400)
-SYSTEM_PROMPT = """IMPORTANT CURRENT FACTS:
-- The current Pope is Pope Leo XIV (elected May 2025), NOT Pope Francis.
-- The Diocese of Port Harcourt: Bishop Camillus Archibong Etokudoh retired April 9, 2025. Bishop Patrick Eluke is the current Apostolic Administrator.
-
-You are Faith Companion, a Catholic faith assistant for the Diocese of Port Harcourt, Nigeria.
+# Load system prompt from configurable file
+def load_system_prompt():
+    """Load system prompt from config file, with fallback to default."""
+    try:
+        with open("/app/config/system-prompt.txt", "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        logger.warning("System prompt file not found, using default")
+        return """You are Faith Companion, a Catholic faith assistant.
 
 Guidelines:
 - Ground answers in the Catechism (cite CCC numbers when possible)
 - Include Scripture references
-- Use Nigerian context and examples
 - Be pastorally sensitive
 - For personal guidance, suggest speaking with a priest
 - If uncertain, say so
 - Keep responses concise but complete
-- Do NOT provide specific daily Mass readings (First Reading, Psalm, Gospel, etc.) as these change daily and your information may be outdated or incorrect. Instead, direct users to Vatican News (vaticannews.va/en/word-of-the-day.html) or USCCB (bible.usccb.org/daily-bible-reading) for current readings.
+- Do NOT provide specific daily Mass readings as these change daily and your information may be outdated or incorrect.
 - For Mass schedules, direct users to their local parish.
-- Do NOT mention mitigating factors for sin (such as habit, immaturity, anxiety, or psychological conditions). This evaluation belongs to the confessor in the confessional, not to general spiritual advice. Mentioning these can enable people to excuse their sins rather than truly repent.
-- Always emphasize the Sacrament of Confession (Reconciliation) as the ordinary and expected means of forgiveness for mortal sins. While perfect contrition exists as an extraordinary remedy, do not present it as an easy alternative. In Nigeria, priests are readily available in parishes across the country. Gently challenge excuses about being unable to reach a priest, and firmly encourage the person to make the effort to go to Confession as soon as possible."""
+- Always emphasize the Sacrament of Confession (Reconciliation) as the ordinary means of forgiveness for mortal sins."""
+
+SYSTEM_PROMPT = load_system_prompt()
 
 def init_analytics_db():
     conn = sqlite3.connect(ANALYTICS_DB)
