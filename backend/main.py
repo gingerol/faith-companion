@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel, Field, validator
-import anthropic
+from openai import OpenAI
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
@@ -166,14 +166,14 @@ def parse_referrer(referrer: Optional[str]) -> str:
         return ""
 
 # ============== TOKEN COST CALCULATION ==============
-# Haiku pricing: $0.25/MTok input, $1.25/MTok output
-HAIKU_INPUT_COST_PER_MTOK = 0.25
-HAIKU_OUTPUT_COST_PER_MTOK = 1.25
+# Moonshot moonshot-v1-8k pricing: ¥12/MTok input, ¥12/MTok output (~$1.65/MTok USD)
+MOONSHOT_INPUT_COST_PER_MTOK = 1.65
+MOONSHOT_OUTPUT_COST_PER_MTOK = 1.65
 
 def calculate_cost(input_tokens: int, output_tokens: int) -> float:
     """Calculate estimated cost in USD."""
-    input_cost = (input_tokens / 1_000_000) * HAIKU_INPUT_COST_PER_MTOK
-    output_cost = (output_tokens / 1_000_000) * HAIKU_OUTPUT_COST_PER_MTOK
+    input_cost = (input_tokens / 1_000_000) * MOONSHOT_INPUT_COST_PER_MTOK
+    output_cost = (output_tokens / 1_000_000) * MOONSHOT_OUTPUT_COST_PER_MTOK
     return input_cost + output_cost
 
 # ============== INPUT VALIDATION ==============
@@ -539,16 +539,16 @@ def initialize_rag():
 @app.on_event("startup")
 async def startup_event():
     global client
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    api_key = os.environ.get("MOONSHOT_API_KEY")
     if not api_key:
-        raise RuntimeError("ANTHROPIC_API_KEY environment variable must be set")
-    client = anthropic.Anthropic(api_key=api_key)
+        raise RuntimeError("MOONSHOT_API_KEY environment variable must be set")
+    client = OpenAI(api_key=api_key, base_url="https://api.moonshot.ai/v1")
     init_analytics_db()
     initialize_rag()
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "model": "claude-3-haiku"}
+    return {"status": "healthy", "model": "moonshot-v1-8k"}
 
 @app.post("/chat")
 async def chat(request: ChatRequest, req: Request):
@@ -612,18 +612,18 @@ async def chat(request: ChatRequest, req: Request):
         messages.append({"role": "user", "content": request.message})
 
     try:
-        # OPTIMIZED: Haiku + 800 max tokens
-        response = client.messages.create(
-            model="claude-3-haiku-20240307",
+        # Moonshot Kimi v1-8k
+        api_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + messages
+        response = client.chat.completions.create(
+            model="moonshot-v1-8k",
             max_tokens=800,
-            system=SYSTEM_PROMPT,
-            messages=messages
+            messages=api_messages
         )
-        ai_response = response.content[0].text
+        ai_response = response.choices[0].message.content
 
         # Extract token usage and calculate cost
-        input_tokens = response.usage.input_tokens
-        output_tokens = response.usage.output_tokens
+        input_tokens = response.usage.prompt_tokens
+        output_tokens = response.usage.completion_tokens
         estimated_cost = calculate_cost(input_tokens, output_tokens)
 
         chat_id = log_chat_interaction(session_id, request.message, ai_response,
@@ -1236,10 +1236,10 @@ async def get_cost_analytics(username: str = Depends(verify_admin)):
     conn.close()
 
     return {
-        "model": "claude-3-haiku-20240307",
-        "model_display": "Claude 3 Haiku",
-        "input_cost_per_mtok": HAIKU_INPUT_COST_PER_MTOK,
-        "output_cost_per_mtok": HAIKU_OUTPUT_COST_PER_MTOK,
+        "model": "moonshot-v1-8k",
+        "model_display": "Moonshot Kimi v1-8k",
+        "input_cost_per_mtok": MOONSHOT_INPUT_COST_PER_MTOK,
+        "output_cost_per_mtok": MOONSHOT_OUTPUT_COST_PER_MTOK,
         "total_input_tokens": total_input,
         "total_output_tokens": total_output,
         "total_cost": round(total_cost, 4),
